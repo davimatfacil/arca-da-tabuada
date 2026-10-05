@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arca da Tabuada</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #eef6fb; margin: 0; color: #223; }
+  #app { max-width: 560px; margin: 0 auto; padding: 16px; }
+  .card { background: #fff; border-radius: 14px; padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 6px #0002; }
+  h1 { text-align: center; margin: 8px 0 14px; }
+  button { font-size: 1.1rem; padding: 10px 18px; border: 0; border-radius: 10px; background: #2f7fc1; color: #fff; cursor: pointer; margin: 4px; }
+  button.sec { background: #8aa; }
+  input[type=number] { font-size: 1.4rem; width: 5em; padding: 8px; text-align: center; }
+  .arca { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; font-size: 1.8rem; }
+  .vazio { opacity: .15; filter: grayscale(1); }
+  .msg-ok { color: #1a7f37; font-weight: bold; }
+  .msg-erro { color: #b35c00; }
+  .adulto { background: #fff7e0; border-left: 5px solid #e0a800; }
+  .versiculo { font-style: italic; border-left: 5px solid #2f7fc1; padding-left: 12px; }
+  small { color: #667; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =====================================================
+   1) DADOS: tudo que é conteúdo fica separado da lógica.
+   ===================================================== */
+
+// Missões da Bíblia de papel. O jogo NÃO traz o texto do versículo: só a referência
+// (livro, capítulo, versículo), uma pista com palavras nossas e uma pergunta de conversa.
+// Assim a família precisa abrir a Bíblia física para ler, e não há questão de direitos autorais.
+const VERSICULOS = [
+  { livro: "Gênesis", cap: 6, ver: 22,
+    pista: "Este versículo fala sobre a obediência de Noé.",
+    pergunta: "Obedecer sempre é fácil? Quando é mais difícil para vocês?" },
+  { livro: "Gênesis", cap: 9, ver: 13,
+    pista: "Este versículo fala de um sinal que aparece no céu depois da chuva.",
+    pergunta: "Quando vocês veem um arco-íris, o que podem lembrar?" },
+  { livro: "Deuteronômio", cap: 6, ver: 7,
+    pista: "Este versículo fala sobre conversar com os filhos sobre Deus no dia a dia.",
+    pergunta: "Em que momentos do nosso dia podemos conversar sobre Deus juntos?" },
+  { livro: "Gênesis", cap: 8, ver: 22,
+    pista: "Este versículo fala da ordem e da regularidade que Deus mantém na criação: dia, noite, estações.",
+    pergunta: "Por que é tão bom que a natureza siga um padrão? E a tabuada, também segue um padrão?" },
+  { livro: "Salmos", cap: 19, ver: 1,
+    pista: "Este versículo fala do que o céu e a criação mostram sobre Deus.",
+    pergunta: "O que na criação 'fala' de Deus para vocês? E os números e padrões, também falam?" }
+];
+
+// Cenas da história. {a} = número da tabuada, {b} = multiplicador (1 a 10).
+// Os números são INVENTADOS, só para praticar. Não são dados da Bíblia.
+const CENAS = [
+  "Noé separou {a} cestos de comida para os animais. Em cada cesto cabem {b} frutas. Quantas frutas ao todo?",
+  "Na arca havia {a} andares de cabines. Em cada andar, {b} filhotes dormiam. Quantos filhotes dormiam ao todo?",
+  "Noé encheu {a} jarros de água por dia, durante {b} dias. Quantos jarros ele encheu?",
+  "A família de Noé preparou {a} pães para cada uma das {b} refeições. Quantos pães foram preparados?",
+  "Em cada janela da arca pousaram {a} pássaros. São {b} janelas. Quantos pássaros ao todo?"
+];
+
+// Perguntas de conversa para o ADULTO fazer em voz alta.
+const CONVERSAS = [
+  "Esse resultado vai ser o mesmo amanhã? E na casa de um amigo, em outra cidade? O que isso mostra sobre o mundo que Deus criou?",
+  "Quem inventou a tabuada? Ou ela já estava 'escondida' no mundo, esperando ser descoberta, como um tesouro? Será que Deus criou os números? Em Gênesis 1, os dias da criação aparecem em ordem e contados: primeiro, segundo, terceiro…",
+  "Deus mantém o mundo funcionando com ordem todos os dias. Onde mais vocês enxergam essa ordem? (dia e noite, estações do ano, plantas crescendo…)"
+];
+
+/* =====================================================
+   2) ESTADO: o que muda durante o jogo.
+   ===================================================== */
+const ANIMAIS = ["🐘","🦒","🐑","🐇","🦁","🐢","🐪","🐿️","🦜","🐄"];
+let estado = { tabuada: 2, perguntas: [], i: 0, erros: 0 };
+
+/* =====================================================
+   3) LÓGICA
+   ===================================================== */
+
+// Embaralha uma lista (algoritmo Fisher-Yates): garante que
+// cada multiplicador (1..10) aparece UMA vez, sem repetir.
+function embaralhar(lista) {
+  const l = [...lista];
+  for (let k = l.length - 1; k > 0; k--) {
+    const j = Math.floor(Math.random() * (k + 1));
+    [l[k], l[j]] = [l[j], l[k]];
+  }
+  return l;
+}
+
+function novoJogo(tabuada) {
+  const bs = embaralhar([1,2,3,4,5,6,7,8,9,10]);
+  estado = {
+    tabuada,
+    // cada pergunta guarda a conta e a cena (cenas se alternam em ciclo)
+    perguntas: bs.map((b, idx) => ({ a: tabuada, b, cena: CENAS[idx % CENAS.length] })),
+    i: 0,
+    erros: 0
+  };
+  telaJogo();
+}
+
+// Troca {a} e {b} pelos números da pergunta.
+function montarTexto(p) {
+  return p.cena.replace("{a}", p.a).replace("{b}", p.b);
+}
+
+// Dica para o adulto: lista a contagem de a em a, sem dar a resposta final.
+function dica(p) {
+  const passos = [];
+  for (let k = 1; k < p.b; k++) passos.push(p.a * k);
+  return `Contem de ${p.a} em ${p.a} com os dedos: ${passos.join(", ") || p.a}… e continuem até chegar a ${p.b} grupos.`;
+}
+
+/* =====================================================
+   4) TELAS (cada uma desenha HTML dentro de #app)
+   ===================================================== */
+const app = document.getElementById("app");
+
+function telaInicio() {
+  let botoes = "";
+  for (let n = 2; n <= 5; n++) botoes += `<button onclick="novoJogo(${n})">Tabuada do ${n}</button>`;
+  app.innerHTML = `
+    <h1>🚢 Arca da Tabuada</h1>
+    <div class="card">
+      <p><b>Para jogar em família.</b> A criança responde a conta; o adulto lê a história e conversa com ela.
+      Acertando juntos, os animais entram na arca.</p>
+      <p><small>Os números dos problemas são inventados para praticar. No final, vocês abrem a Bíblia para ler o versículo juntos.</small></p>
+      <p><small>A matemática não é invenção nossa: é parte da ordem que Deus criou, e nós a descobrimos. Vamos descobrir um pouco dela juntos.</small></p>
+      <p>Escolham a tabuada:</p>${botoes}
+    </div>`;
+}
+
+function telaJogo() {
+  const p = estado.perguntas[estado.i];
+  // Desenha a arca: animais já conquistados aparecem, os outros ficam apagados.
+  const arca = ANIMAIS.map((an, k) =>
+    `<span class="${k < estado.i ? "" : "vazio"}">${an}</span>`).join("");
+
+  app.innerHTML = `
+    <h1>🚢 Tabuada do ${estado.tabuada}</h1>
+    <div class="card"><div class="arca">${arca}</div></div>
+    <div class="card">
+      <p><b>Pergunta ${estado.i + 1} de 10</b></p>
+      <p>${montarTexto(p)}</p>
+      <p><b>${p.a} × ${p.b} = ?</b></p>
+      <input type="number" id="resp" inputmode="numeric" autofocus>
+      <button onclick="responder()">Responder</button>
+      <p id="retorno"></p>
+    </div>`;
+  document.getElementById("resp").addEventListener("keydown", e => { if (e.key === "Enter") responder(); });
+}
+
+function responder() {
+  const p = estado.perguntas[estado.i];
+  const campo = document.getElementById("resp");
+  const retorno = document.getElementById("retorno");
+  if (campo.value === "") return;
+
+  if (Number(campo.value) === p.a * p.b) {
+    // ACERTOU: mostra mensagem e, a cada 3 perguntas, a pergunta de conversa.
+    let extra = "";
+    if (estado.i % 3 === 2) {
+      const q = CONVERSAS[Math.floor(estado.i / 3) % CONVERSAS.length];
+      extra = `<div class="card adulto"><b>👨‍👩‍👧 Para o adulto perguntar:</b><br>${q}</div>`;
+    }
+    retorno.innerHTML = `<span class="msg-ok">✔ Isso! ${p.a} × ${p.b} = ${p.a * p.b}. Mais um animal na arca!</span>${extra}
+      <br><button onclick="proxima()">Continuar</button>`;
+    campo.disabled = true;
+  } else {
+    // ERROU: sem punição. O adulto recebe uma dica e tentam de novo.
+    estado.erros++;
+    retorno.innerHTML = `<span class="msg-erro">Quase! Tentem de novo.</span>
+      <div class="card adulto"><b>👨‍👩‍👧 Dica para o adulto:</b> ${dica(p)}</div>`;
+    campo.value = ""; campo.focus();
+  }
+}
+
+function proxima() {
+  estado.i++;
+  if (estado.i >= 10) telaFim(); else telaJogo();
+}
+
+function telaFim() {
+  // Sorteia uma missão da tabela. O endereço é montado a partir de livro, capítulo e versículo.
+  const v = VERSICULOS[Math.floor(Math.random() * VERSICULOS.length)];
+  app.innerHTML = `
+    <h1>🎉 A arca está cheia!</h1>
+    <div class="card">
+      <p>Vocês completaram a tabuada do ${estado.tabuada}. Tentativas erradas: ${estado.erros}.</p>
+      <div class="arca">${ANIMAIS.join("")}</div>
+    </div>
+    <div class="card versiculo">
+      <p><b>📖 Missão final: a caça ao versículo!</b></p>
+      <p>Desliguem a tela por uns minutos e peguem uma <b>Bíblia</b>.</p>
+      <p style="font-size:1.3rem"><b>${v.livro} ${v.cap}:${v.ver}</b></p>
+      <p><small>${v.pista}</small></p>
+      <ol>
+        <li>Procurem o livro <b>${v.livro}</b> no índice, no começo da Bíblia.</li>
+        <li>Abram no <b>capítulo ${v.cap}</b>.</li>
+        <li>Achem o <b>versículo ${v.ver}</b> (os números pequenos no texto).</li>
+        <li>Quem achar primeiro lê em voz alta para o outro! 🏆</li>
+      </ol>
+      <p><small>Dica: o endereço se lê assim: livro, capítulo, versículo.</small></p>
+    </div>
+    <div class="card adulto">
+      <b>👨‍👩‍👧 Depois de ler, conversem:</b><br>${v.pergunta}
+    </div>
+    <button onclick="telaInicio()">Jogar de novo</button>`;
+}
+
+telaInicio();
+</script>
+</body>
+</html>
