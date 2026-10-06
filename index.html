@@ -61,16 +61,21 @@ const CENAS = [
   "Em cada janela da arca pousaram {a} pássaros. São {b} janelas. Quantos pássaros ao todo?"
 ];
 
-// ECOS: números que aparecem na Bíblia. A chave é o RESULTADO da conta (o produto).
-// O jogo só aponta onde o número aparece: não dá significado místico a ele.
+// ECOS: UMA multiplicação por tabuada cujo resultado aparece escrito na Bíblia.
+// A chave é "AxB" (tabuada x multiplicador). Só essa conta mostra a curiosidade;
+// tabuada sem entrada aqui simplesmente não mostra nada.
+// O jogo só aponta onde o número aparece: não dá significado a ele.
 // Cada referência foi conferida no texto (NVT) antes de entrar.
-// (49 e 70 já estão prontos para quando entrar a tabuada do 7.)
 const ECOS = {
-  12: ["Mateus 10:1", "Gênesis 49:28"],             // doze discípulos / doze tribos
-  30: ["Lucas 3:23"],                                // cerca de trinta anos
-  40: ["Mateus 4:2", "Êxodo 24:18", "Gênesis 7:12"], // quarenta dias e quarenta noites
-  49: ["Levítico 25:8"],                             // sete vezes sete anos = 49
-  70: ["Gênesis 46:27"]                              // setenta membros da família de Jacó
+  "2x6":   "Mateus 10:1",    // 12: os doze discípulos
+  "3x10":  "Lucas 3:23",     // 30: Jesus tinha cerca de trinta anos
+  "4x10":  "Mateus 4:2",     // 40: quarenta dias e quarenta noites
+  "5x8":   "Êxodo 24:18",    // 40: Moisés no monte, quarenta dias e noites
+  "6x4":   "Apocalipse 4:4", // 24: vinte e quatro anciãos
+  "7x7":   "Levítico 25:8",  // 49: sete vezes sete anos
+  "8x10":  "Êxodo 7:7",      // 80: a idade de Moisés
+  "9x10":  "Gênesis 17:17",  // 90: a idade de Sara
+  "10x10": "Gênesis 21:5"    // 100: a idade de Abraão
 };
 
 // Perguntas de conversa para o ADULTO fazer em voz alta.
@@ -125,13 +130,12 @@ function dica(p) {
   return `Contem de ${p.a} em ${p.a} com os dedos: ${passos.join(", ") || p.a}… e continuem até chegar a ${p.b} grupos.`;
 }
 
-// Se o resultado da conta está na tabela ECOS, devolve UMA linha curta com uma
-// referência sorteada. Se não está, devolve texto vazio e nada aparece na tela.
-function buscarEco(produto) {
-  const refs = ECOS[produto];
-  if (!refs) return "";
-  const ref = refs[Math.floor(Math.random() * refs.length)];
-  return `<p class="eco">📖 O número <b>${produto}</b> aparece na Bíblia: leiam <b>${ref}</b>.</p>`;
+// Se a conta (a x b) está na tabela ECOS, devolve UMA linha curta com a curiosidade.
+// Se não está, devolve texto vazio e nada aparece na tela.
+function buscarEco(a, b) {
+  const ref = ECOS[`${a}x${b}`];
+  if (!ref) return "";
+  return `<p class="eco">📖 <b>Curiosidade:</b> sabia que o número <b>${a * b}</b> também aparece na Bíblia? Leiam <b>${ref}</b>.</p>`;
 }
 
 /* =====================================================
@@ -141,7 +145,7 @@ const app = document.getElementById("app");
 
 function telaInicio() {
   let botoes = "";
-  for (let n = 2; n <= 5; n++) botoes += `<button onclick="novoJogo(${n})">Tabuada do ${n}</button>`;
+  for (let n = 2; n <= 10; n++) botoes += `<button onclick="novoJogo(${n})">Tabuada do ${n}</button>`;
   app.innerHTML = `
     <h1>🚢 Arca da Tabuada</h1>
     <div class="card">
@@ -187,7 +191,7 @@ function responder() {
       const q = CONVERSAS[Math.floor(estado.i / 3) % CONVERSAS.length];
       extra = `<div class="card adulto"><b>👨‍👩‍👧 Para o adulto perguntar:</b><br>${q}</div>`;
     }
-    retorno.innerHTML = `<span class="msg-ok">✔ Isso! ${p.a} × ${p.b} = ${produto}. Mais um animal na arca!</span>${buscarEco(produto)}${extra}
+    retorno.innerHTML = `<span class="msg-ok">✔ Isso! ${p.a} × ${p.b} = ${produto}. Mais um animal na arca!</span>${buscarEco(p.a, p.b)}${extra}
       <br><button onclick="proxima()">Continuar</button>`;
     campo.disabled = true;
   } else {
