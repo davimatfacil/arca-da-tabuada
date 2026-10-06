@@ -17,6 +17,7 @@
   .msg-ok { color: #1a7f37; font-weight: bold; }
   .msg-erro { color: #b35c00; }
   .adulto { background: #fff7e0; border-left: 5px solid #e0a800; }
+  .eco { margin: 8px 0 0; padding: 6px 10px; background: #eaf6ee; border-left: 4px solid #3a9d55; border-radius: 6px; font-size: .95rem; }
   .versiculo { font-style: italic; border-left: 5px solid #2f7fc1; padding-left: 12px; }
   small { color: #667; }
 </style>
@@ -29,9 +30,9 @@
    1) DADOS: tudo que é conteúdo fica separado da lógica.
    ===================================================== */
 
-// Missões da Bíblia de papel. O jogo NÃO traz o texto do versículo: só a referência
+// Missões da Bíblia. O jogo NÃO traz o texto do versículo: só a referência
 // (livro, capítulo, versículo), uma pista com palavras nossas e uma pergunta de conversa.
-// Assim a família precisa abrir a Bíblia física para ler, e não há questão de direitos autorais.
+// Assim a família precisa abrir a Bíblia para ler, e não há questão de direitos autorais.
 const VERSICULOS = [
   { livro: "Gênesis", cap: 6, ver: 22,
     pista: "Este versículo fala sobre a obediência de Noé.",
@@ -60,10 +61,22 @@ const CENAS = [
   "Em cada janela da arca pousaram {a} pássaros. São {b} janelas. Quantos pássaros ao todo?"
 ];
 
+// ECOS: números que aparecem na Bíblia. A chave é o RESULTADO da conta (o produto).
+// O jogo só aponta onde o número aparece: não dá significado místico a ele.
+// Cada referência foi conferida no texto (NVT) antes de entrar.
+// (49 e 70 já estão prontos para quando entrar a tabuada do 7.)
+const ECOS = {
+  12: ["Mateus 10:1", "Gênesis 49:28"],             // doze discípulos / doze tribos
+  30: ["Lucas 3:23"],                                // cerca de trinta anos
+  40: ["Mateus 4:2", "Êxodo 24:18", "Gênesis 7:12"], // quarenta dias e quarenta noites
+  49: ["Levítico 25:8"],                             // sete vezes sete anos = 49
+  70: ["Gênesis 46:27"]                              // setenta membros da família de Jacó
+};
+
 // Perguntas de conversa para o ADULTO fazer em voz alta.
 const CONVERSAS = [
   "Esse resultado vai ser o mesmo amanhã? E na casa de um amigo, em outra cidade? O que isso mostra sobre o mundo que Deus criou?",
-  "Quem inventou a tabuada? Ou ela já estava 'escondida' no mundo, esperando ser descoberta, como um tesouro? Será que Deus criou os números? Em Gênesis 1, os dias da criação aparecem em ordem e contados: primeiro, segundo, terceiro…",
+  "Que padrão vocês perceberam nos resultados desta tabuada? Será que ele continua para sempre?",
   "Deus mantém o mundo funcionando com ordem todos os dias. Onde mais vocês enxergam essa ordem? (dia e noite, estações do ano, plantas crescendo…)"
 ];
 
@@ -112,6 +125,15 @@ function dica(p) {
   return `Contem de ${p.a} em ${p.a} com os dedos: ${passos.join(", ") || p.a}… e continuem até chegar a ${p.b} grupos.`;
 }
 
+// Se o resultado da conta está na tabela ECOS, devolve UMA linha curta com uma
+// referência sorteada. Se não está, devolve texto vazio e nada aparece na tela.
+function buscarEco(produto) {
+  const refs = ECOS[produto];
+  if (!refs) return "";
+  const ref = refs[Math.floor(Math.random() * refs.length)];
+  return `<p class="eco">📖 O número <b>${produto}</b> aparece na Bíblia: leiam <b>${ref}</b>.</p>`;
+}
+
 /* =====================================================
    4) TELAS (cada uma desenha HTML dentro de #app)
    ===================================================== */
@@ -126,7 +148,6 @@ function telaInicio() {
       <p><b>Para jogar em família.</b> A criança responde a conta; o adulto lê a história e conversa com ela.
       Acertando juntos, os animais entram na arca.</p>
       <p><small>Os números dos problemas são inventados para praticar. No final, vocês abrem a Bíblia para ler o versículo juntos.</small></p>
-      <p><small>A matemática não é invenção nossa: é parte da ordem que Deus criou, e nós a descobrimos. Vamos descobrir um pouco dela juntos.</small></p>
       <p>Escolham a tabuada:</p>${botoes}
     </div>`;
 }
@@ -157,14 +178,16 @@ function responder() {
   const retorno = document.getElementById("retorno");
   if (campo.value === "") return;
 
-  if (Number(campo.value) === p.a * p.b) {
-    // ACERTOU: mostra mensagem e, a cada 3 perguntas, a pergunta de conversa.
+  const produto = p.a * p.b;
+  if (Number(campo.value) === produto) {
+    // ACERTOU: mensagem + (se o número tiver eco) uma linha com a referência
+    // + a cada 3 perguntas, a pergunta de conversa.
     let extra = "";
     if (estado.i % 3 === 2) {
       const q = CONVERSAS[Math.floor(estado.i / 3) % CONVERSAS.length];
       extra = `<div class="card adulto"><b>👨‍👩‍👧 Para o adulto perguntar:</b><br>${q}</div>`;
     }
-    retorno.innerHTML = `<span class="msg-ok">✔ Isso! ${p.a} × ${p.b} = ${p.a * p.b}. Mais um animal na arca!</span>${extra}
+    retorno.innerHTML = `<span class="msg-ok">✔ Isso! ${p.a} × ${p.b} = ${produto}. Mais um animal na arca!</span>${buscarEco(produto)}${extra}
       <br><button onclick="proxima()">Continuar</button>`;
     campo.disabled = true;
   } else {
