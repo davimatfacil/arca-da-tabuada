@@ -17,7 +17,6 @@
   .msg-ok { color: #1a7f37; font-weight: bold; }
   .msg-erro { color: #b35c00; }
   .adulto { background: #fff7e0; border-left: 5px solid #e0a800; }
-  .eco { margin: 8px 0 0; padding: 6px 10px; background: #eaf6ee; border-left: 4px solid #3a9d55; border-radius: 6px; font-size: .95rem; }
   .versiculo { font-style: italic; border-left: 5px solid #2f7fc1; padding-left: 12px; }
   small { color: #667; }
 </style>
@@ -60,23 +59,6 @@ const CENAS = [
   "A família de Noé preparou {a} pães para cada uma das {b} refeições. Quantos pães foram preparados?",
   "Em cada janela da arca pousaram {a} pássaros. São {b} janelas. Quantos pássaros ao todo?"
 ];
-
-// ECOS: UMA multiplicação por tabuada cujo resultado aparece escrito na Bíblia.
-// A chave é "AxB" (tabuada x multiplicador). Só essa conta mostra a curiosidade;
-// tabuada sem entrada aqui simplesmente não mostra nada.
-// O jogo só aponta onde o número aparece: não dá significado a ele.
-// Cada referência foi conferida no texto (NVT) antes de entrar.
-const ECOS = {
-  "2x6":   "Mateus 10:1",    // 12: os doze discípulos
-  "3x10":  "Lucas 3:23",     // 30: Jesus tinha cerca de trinta anos
-  "4x10":  "Mateus 4:2",     // 40: quarenta dias e quarenta noites
-  "5x8":   "Êxodo 24:18",    // 40: Moisés no monte, quarenta dias e noites
-  "6x4":   "Apocalipse 4:4", // 24: vinte e quatro anciãos
-  "7x7":   "Levítico 25:8",  // 49: sete vezes sete anos
-  "8x10":  "Êxodo 7:7",      // 80: a idade de Moisés
-  "9x10":  "Gênesis 17:17",  // 90: a idade de Sara
-  "10x10": "Gênesis 21:5"    // 100: a idade de Abraão
-};
 
 // Perguntas de conversa para o ADULTO fazer em voz alta.
 const CONVERSAS = [
@@ -130,14 +112,6 @@ function dica(p) {
   return `Contem de ${p.a} em ${p.a} com os dedos: ${passos.join(", ") || p.a}… e continuem até chegar a ${p.b} grupos.`;
 }
 
-// Se a conta (a x b) está na tabela ECOS, devolve UMA linha curta com a curiosidade.
-// Se não está, devolve texto vazio e nada aparece na tela.
-function buscarEco(a, b) {
-  const ref = ECOS[`${a}x${b}`];
-  if (!ref) return "";
-  return `<p class="eco">📖 <b>Curiosidade:</b> sabia que o número <b>${a * b}</b> também aparece na Bíblia? Leiam <b>${ref}</b>.</p>`;
-}
-
 /* =====================================================
    4) TELAS (cada uma desenha HTML dentro de #app)
    ===================================================== */
@@ -184,14 +158,13 @@ function responder() {
 
   const produto = p.a * p.b;
   if (Number(campo.value) === produto) {
-    // ACERTOU: mensagem + (se o número tiver eco) uma linha com a referência
-    // + a cada 3 perguntas, a pergunta de conversa.
+    // ACERTOU: mostra a mensagem e, a cada 3 perguntas, a pergunta de conversa.
     let extra = "";
     if (estado.i % 3 === 2) {
       const q = CONVERSAS[Math.floor(estado.i / 3) % CONVERSAS.length];
       extra = `<div class="card adulto"><b>👨‍👩‍👧 Para o adulto perguntar:</b><br>${q}</div>`;
     }
-    retorno.innerHTML = `<span class="msg-ok">✔ Isso! ${p.a} × ${p.b} = ${produto}. Mais um animal na arca!</span>${buscarEco(p.a, p.b)}${extra}
+    retorno.innerHTML = `<span class="msg-ok">✔ Isso! ${p.a} × ${p.b} = ${produto}. Mais um animal na arca!</span>${extra}
       <br><button onclick="proxima()">Continuar</button>`;
     campo.disabled = true;
   } else {
